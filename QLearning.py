@@ -12,10 +12,10 @@ from Bus import Bus
 import pathlib
 import json
 
-city=City()
+env=City()
 #animator=Animator(city)
-bus = Bus(5,3,city.chart,city.Halts)
-city.AddBus([bus])
+bus = Bus(5,3,env.chart,env.Halts)
+env.AddBus([bus])
 
 
 app = QApplication(sys.argv)
@@ -44,7 +44,7 @@ def gen_epsilon_greedy_policy(n_action,epsilon):
         return action
     return policy_function
 
-epsilon_greedy_policy=gen_epsilon_greedy_policy(city.busses[0].action_space,epsilon)
+epsilon_greedy_policy=gen_epsilon_greedy_policy(env.busses[0].action_space,epsilon)
 
 """Функция, выполняющая Q-обучение"""
 def q_learning(env,gamma,n_episode,alpha):
@@ -160,7 +160,7 @@ def q_learning(env,gamma,n_episode,alpha):
 
 
 
-optimal_Q,optimal_policy=q_learning(city,gamma,n_episode,alpha)
+optimal_Q,optimal_policy=q_learning(env,gamma,n_episode,alpha)
 
 # opt_Q = {}
 
@@ -187,27 +187,29 @@ optimal_Q,optimal_policy=q_learning(city,gamma,n_episode,alpha)
 
 
 class AThread(QThread):
-
-    def run(self,animator):       
-        self.sleep(1)
+    
+    def run(self,animator,action):
+        self.sleep(1)   
+        re=env.step([action])
+        next_state,reward,is_done=re[0]       
         animator.Update()
         QApplication.processEvents()
+        self.Data=next_state
+        
 
 
 env=City()
-bus = Bus(5,4,city.chart,city.Halts)
+bus = Bus(5,3,env.chart,env.Halts)
 t = AThread()
 env.AddBus([bus])
 state=env.posPlayer()
-animator=Animator(city)
+animator=Animator(env)
 is_done=False
 while not is_done:
     action=epsilon_greedy_policy(state[0],optimal_Q)
-    re=env.step([action])
-    next_state,reward,is_done=re[0]
-    #next_state,reward,is_done=env.step(action)
-    #t.run(animator=animator)
-    #state[0]=next_state
+    t.run(animator=animator,action=action)
+    t.wait()
+    state[0]=t.Data
     #t.wait()
     #env.render()
 
