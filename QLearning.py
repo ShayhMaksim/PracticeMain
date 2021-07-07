@@ -20,11 +20,11 @@ env.AddBus([bus])
 
 app = QApplication(sys.argv)
 
-n_episode=2000
+n_episode=5000
 #q_learning
 gamma=1
-alpha=0.4
-epsilon=0.1
+alpha=0.3
+epsilon=0.01
 
 #sarsa
 # epsilon=0.03
@@ -125,42 +125,46 @@ def q_learning(env,gamma,n_episode,alpha):
 #     return Q, policy
                 
 
-# def sarsa(env, gamma, n_episode, alpha):
-#     """
-#     Строит оптимальную стратегию методом SARSA с единой стратегией
-#     @param env: имя окружающей среды OpenAI Gym
-#     @param gamma: коэффициент обесценивания
-#     @param n_episode: количество эпизодов
-#     @return: оптимальные Q-функция и стратегия
-#     """
-#     n_action = env.player.action_space
-#     Q = defaultdict(lambda: torch.zeros(n_action))
-#     for episode in range(n_episode):
-#         env=Map.reset()
-#         state=env.posPlayer()
-#         is_done=False
-#         action = epsilon_greedy_policy(state, Q)
-#         while not is_done:
-#             next_state, reward, is_done = env.step(action)
-#             next_action = epsilon_greedy_policy(next_state, Q)
-#             td_delta = reward + gamma * Q[next_state][next_action]- Q[state][action]
-#             Q[state][action] += alpha * td_delta
-#             length_episode[episode] += 1
-#             total_reward_episode[episode] += reward
-#             if is_done:
-#                 break
-#             state = next_state
-#             action = next_action
-#     policy = {}
-#     for state, actions in Q.items():
-#         policy[state] = torch.argmax(actions).item()
-#     return Q, policy
+def sarsa(env, gamma, n_episode, alpha):
+    """
+    Строит оптимальную стратегию методом SARSA с единой стратегией
+    @param env: имя окружающей среды OpenAI Gym
+    @param gamma: коэффициент обесценивания
+    @param n_episode: количество эпизодов
+    @return: оптимальные Q-функция и стратегия
+    """
+    n_action = env.busses[0].action_space
+    Q = defaultdict(lambda: torch.zeros(n_action))
+    for episode in range(n_episode):
+        env=City()
+        bus = Bus(5,3,env.chart,env.Halts)#!!!!!!!!!!!!!!!!!
+        env.AddBus([bus])
+        state=env.posPlayer()
+        is_done=False
+        action = epsilon_greedy_policy(state[0], Q)
+        while not is_done:
+            r = env.step([action])
+            next_state, reward, is_done = r[0]
+            next_action = epsilon_greedy_policy(next_state, Q)
+            td_delta = reward + gamma * Q[next_state][next_action]- Q[state[0]][action]
+            Q[state[0]][action] += alpha * td_delta
+            length_episode[episode] += 1
+            total_reward_episode[episode] += reward
+            if is_done:
+                print('Эпизод: {}, полное вознаграждение: {}'.format(episode, total_reward_episode[episode]))
+                break
+            state[0] = next_state
+            action = next_action
+    policy = {}
+    for state, actions in Q.items():
+        policy[state] = torch.argmax(actions).item()
+    return Q, policy
 
 
 
 
 
-optimal_Q,optimal_policy=q_learning(env,gamma,n_episode,alpha)
+optimal_Q,optimal_policy=sarsa(env,gamma,n_episode,alpha)
 
 # opt_Q = {}
 
@@ -195,23 +199,29 @@ class AThread(QThread):
         animator.Update()
         QApplication.processEvents()
         self.Data=next_state
+        self.reward=reward
+        self.is_done=is_done
         
 
 
 env=City()
 bus = Bus(5,3,env.chart,env.Halts)
 t = AThread()
+total_reward=0
 env.AddBus([bus])
 state=env.posPlayer()
 animator=Animator(env)
 is_done=False
+step=0
 while not is_done:
     action=epsilon_greedy_policy(state[0],optimal_Q)
     t.run(animator=animator,action=action)
     t.wait()
     state[0]=t.Data
-    #t.wait()
-    #env.render()
+    is_done=t.is_done
+    total_reward+=t.reward
+    print('Эпизод: {}, полное вознаграждение: {}'.format(step, total_reward))
+    step+=1
 
 
 import matplotlib.pyplot as plt

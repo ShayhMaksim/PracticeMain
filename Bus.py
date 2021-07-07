@@ -17,6 +17,7 @@ class Bus:
         self.score=0
         self.isDone=False
         self.halts=halts
+        self.time=0
         #self.capacity=0
 
     def getHalt(self,x) -> Halt:
@@ -48,6 +49,7 @@ class Bus:
         3 - Выбрать путь 1
         4 - Выбрать путь 2
         """
+        self.time+=1
         if command==0:
             if self.y<(len(self.map[self.x])-1):
                 if self.map[self.x][self.y+1]==1:#если впереди есть автобус, то штраф
@@ -131,7 +133,7 @@ class Bus:
             #self.map[self.x][self.y]=1
         
         if  command==2:
-            print(len(self.map[self.x])-1)   
+            #print(len(self.map[self.x])-1)   
             if self.y==(len(self.map[self.x])-1):
                 halt=self.getHalt(self.x)
                 self.map[self.x][self.y]=halt.simbol
@@ -185,8 +187,9 @@ class Bus:
                 self.isDone=True
                 return self.encode(self.x,self.y),self.score, self.isDone
 
-        if self.score>50:
-            self.isDone=True
+        if self.time>100:           
+           self.isDone=True
+           self.score=1000
         return self.encode(self.x,self.y),self.score, self.isDone
 
     def encode(self,player_x,player_y):
