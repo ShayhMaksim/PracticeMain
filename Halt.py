@@ -12,6 +12,6 @@ class Halt:
         
 
     def generate(self):
-        self.passengers=self.passengers+random.randint(1,5)
+        self.passengers=self.passengers+random.randint(1,10)
 
     
