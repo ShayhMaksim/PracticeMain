@@ -1,5 +1,4 @@
-from Bus3 import Bus3
-from Bus2 import Bus2
+
 from typing import List
 from Animator import Animator
 from collections import defaultdict
@@ -17,18 +16,17 @@ import json
 
 env=City()
 #animator=Animator(city)
-bus = Bus3(3,1,env.chart,env.Halts,env.Roads)
+bus = Bus(5,3,env.chart,env.Halts)
 env.AddBus([bus])
 
 
 app = QApplication(sys.argv)
 
-n_episode=1000
+n_episode=2000
 #q_learning
 gamma=1
 alpha=0.4
 epsilon=0.4
-
 
 #sarsa
 # epsilon=0.03
@@ -50,7 +48,6 @@ def gen_epsilon_greedy_policy(n_action,epsilon):
             return np.random.choice(n_action)
         else:
             return torch.argmax(Q[state]).item()
-        
     return policy_function
 
 epsilon_greedy_policy=gen_epsilon_greedy_policy(env.busses[0].action_space,epsilon)
@@ -65,16 +62,15 @@ def q_learning(env,gamma,n_episode,alpha):
     """
     n_action=env.busses[0].action_space
 
-    # Q=[]
-    # Q.append(defaultdict(lambda: torch.zeros(n_action)))
-    # Q.append(defaultdict(lambda: torch.zeros(n_action)))
-    Q=defaultdict(lambda: torch.zeros(n_action))
+    Q=[]
+    Q.append(defaultdict(lambda: torch.zeros(n_action)))
+    #Q.append(defaultdict(lambda: torch.zeros(n_action)))
     bus=None
     #env.render()
     for episode in range(n_episode):
         env=City()
-        bus = Bus3(3,1,env.chart,env.Halts,env.Roads)#!!!!!!!!!!!!!!!!!
-        #bus2 = Bus2(0,1,2,env.chart,env.Halts)#!!!!!!!!!!!!!!!!!
+        bus = Bus(5,3,env.chart,env.Halts)#!!!!!!!!!!!!!!!!!
+
         env.AddBus([bus])
         state=env.posPlayer()
         is_done=[False]
@@ -82,19 +78,19 @@ def q_learning(env,gamma,n_episode,alpha):
         while not (is_done[0]):
             action=[]
             for i in range(len(env.busses)):
-                action.append(epsilon_greedy_policy(state[i],Q))
+                action.append(epsilon_greedy_policy(state[i],Q[i]))
 
             re=env.step(action)
 
             for i in range(len(env.busses)):
                 next_state,reward,is_done_l=re[i]
                 if is_live[i]==True:
-                    td_delta=reward+gamma*torch.max(Q[next_state])-Q[state[i]][action]
-                    Q[state[i]][action]+=alpha*td_delta
+                    td_delta=reward+gamma*torch.max(Q[i][next_state])-Q[i][state[i]][action]
+                    Q[i][state[i]][action]+=alpha*td_delta
                     state[i]=next_state
                     total_reward_episode[episode] += reward
                     is_live[i]=not(is_done_l)
-                is_done[i]=is_done_l
+                    is_done[i]=is_done_l
 
             length_episode[episode] += 1
             #total_reward_episode[episode] += reward
@@ -104,13 +100,13 @@ def q_learning(env,gamma,n_episode,alpha):
                 break
             
             #state[0]=next_state
-  
-    
-    policy = {}
-    for state,actions in Q.items():
-        policy[state]=torch.argmax(actions).item()
-    
-    return Q,policy
+    full_policy=[]
+    for i in range(len(env.busses)):
+        policy = {}
+        for state,actions in Q[i].items():
+            policy[state]=torch.argmax(actions).item()
+        full_policy.append(policy)
+    return Q,full_policy
 
 
 # def double_q_learning(env, gamma, n_episode, alpha):
@@ -166,7 +162,7 @@ def sarsa(env, gamma, n_episode, alpha):
     Q = defaultdict(lambda: torch.zeros(n_action))
     for episode in range(n_episode):
         env=City()
-        bus = Bus3(3,1,env.chart,env.Halts,env.Roads)#!!!!!!!!!!!!!!!!!
+        bus = Bus(5,3,env.chart,env.Halts)#!!!!!!!!!!!!!!!!!
         env.AddBus([bus])
         state=env.posPlayer()
         is_done=False
@@ -194,17 +190,14 @@ def sarsa(env, gamma, n_episode, alpha):
 
 
 optimal_Q,optimal_policy=q_learning(env,gamma,n_episode,alpha)
-epsilon_greedy_policy=gen_epsilon_greedy_policy(env.busses[0].action_space,0)
-opt_Q = {}
+epsilon_greedy_policy=gen_epsilon_greedy_policy(env.busses[0].action_space,0.001)
+# opt_Q = {}
 
-for key,value in optimal_Q.items():
-    opt_Q[key]=value
-
-torch.save(opt_Q,'model/q_learning')
-torch.save(optimal_policy,'model/policy_q_learning')
+# for key,value in optimal_Q.items():
+#     opt_Q[key]=value
 
 # torch.save(opt_Q,'model/q_learning')
-# torch.save(optimal_policy,'model/policy_q_learning')
+# torch.save(optimal_policy,'model/optimal_policy')
 
 # alpha_options = [0.3,0.4, 0.5, 0.6]
 # epsilon_options = [0.2,0.1, 0.03, 0.01]
@@ -242,8 +235,8 @@ class AThread(QThread):
 
 
 env=City()
-bus = Bus3(3,1,env.chart,env.Halts,env.Roads)
-#bus2 = Bus2(0,1,2,env.chart,env.Halts)#!!!!!!!!!!!!!!!!!
+bus = Bus(5,3,env.chart,env.Halts)
+
 t = AThread()
 total_reward=0
 env.AddBus([bus])
@@ -254,8 +247,9 @@ step=0
 while not (is_done[0]):
     action=[]
     for i in range(len(env.busses)):
-        action.append(epsilon_greedy_policy(state[i],optimal_Q))
+        action.append(epsilon_greedy_policy(state[i],optimal_Q[i]))
 
+    
     t.run(animator=animator,action=action)
     t.wait()
     state=t.Data
@@ -271,18 +265,17 @@ plt.plot(length_episode)
 plt.title('Зависимсоть длины эпизода от времени')
 plt.xlabel('Эпизод')
 plt.ylabel('Длина')
-plt.savefig('Зависимсоть длины эпизода от времени Q')
 plt.show()
 
 plt.plot(total_reward_episode)
 plt.title('Зависимсоть вознаграждения в эпизоде от времени')
 plt.xlabel('Эпизод')
 plt.ylabel('Полное вознаграждение')
-plt.savefig('Зависимсоть вознаграждения в эпизоде от времени Q')
 plt.show()
 
-data={'Длина эпизода':length_episode, 'Полное вознаграждение':total_reward_episode}
-df = pd.DataFrame(data)
-df.to_csv('Q_learning')
+
+
+
+
 
 sys.exit(app.exec())

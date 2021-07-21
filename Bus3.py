@@ -1,22 +1,24 @@
 
 
+from Road import Road
 from typing import Reversible
 from PyQt5.sip import enableautoconversion
 from Halt import Halt
 
 
-class Bus:
+class Bus3:
     simbol=1
     action_space=4
     map=None
     halts={}
-    def __init__(self,x,y,map,halts) -> None:
+    def __init__(self,x,y,map,halts,roads) -> None:
         self.x=x
         self.y=y
         self.map=map
         self.score=0
         self.isDone=False
         self.halts=halts
+        self.roads=roads
         self.time=0
         #self.capacity=0
 
@@ -54,23 +56,24 @@ class Bus:
             self.score=0
             return self.encode(self.x,self.y),self.score, self.isDone
         if command==0:
-            if self.y<(len(self.map[self.x])-1):
-                if self.map[self.x][self.y+1]==1:#если впереди есть автобус, то штраф
-                    self.score=-50
-                    #self.map[self.x][self.y]=0
-                    
-                    return self.encode(self.x,self.y),self.score, self.isDone 
+            halt=self.getHalt(self.x)
+            for road in self.roads.values():
+                if road.finish==halt and road.start.simbol==self.map[self.x][0]:
+                    coeff=road.coeff
+                    break
 
-                self.map[self.x][self.y]=0
+            if self.y<(len(self.map[self.x])-1):
+                
+                self.map[self.x][self.y]=10
                 self.y=self.y+1
-                self.score=-1
+                self.score=-1*coeff
                 self.map[self.x][self.y]=1
             else:
                 self.score=-50
                
                 return self.encode(self.x,self.y),self.score, self.isDone
 
-            halt=self.getHalt(self.x)
+            
             if  self.y==(len(self.map[self.x])-1) and halt.isLocked==True: #занято  
                 self.score=-50
                 
@@ -78,7 +81,7 @@ class Bus:
             
             if self.y==(len(self.map[self.x])-1) and halt.isLocked==False:
                 halt.isLocked=True
-                self.score=halt.passengers
+                self.score=halt.passengers-1*coeff
                 halt.passengers=0
                 for h in halt.X:
                     self.map[h[0]][h[1]]=9
@@ -87,13 +90,14 @@ class Bus:
 
             #self.map[self.x][self.y]=1           
         
-        if  command==1:   
+        if  command==1:
+            halt=self.getHalt(self.x) 
+            
+            for road in self.roads.values():
+                if road.finish==halt and road.start.simbol==self.map[self.x][0]:
+                    coeff=road.coeff
+                    break  
             if self.y<(len(self.map[self.x])-1):
-                if self.map[self.x][self.y+1]==1:#если впереди есть автобус, то штраф
-                    self.score=-50
-                    #self.map[self.x][self.y]=0
-                    
-                    return self.encode(self.x,self.y),self.score, self.isDone
 
 
                 if (self.y+2)>(len(self.map[self.x])-1):
@@ -102,22 +106,17 @@ class Bus:
                     
                     return self.encode(self.x,self.y),self.score, self.isDone
 
-                if self.map[self.x][self.y+2]==1:#если впереди есть автобус, то штраф
-                    self.score=-50
-                    #self.map[self.x][self.y]=0
-                    
-                    return self.encode(self.x,self.y),self.score, self.isDone  
 
-                self.map[self.x][self.y]=0    
+                self.map[self.x][self.y]=10    
                 self.y=self.y+2
-                self.score=-1.5
+                self.score=-1.5*coeff*coeff
                 self.map[self.x][self.y]=1
             else:
                 self.score=-50
                 
                 return self.encode(self.x,self.y),self.score, self.isDone
 
-            halt=self.getHalt(self.x)
+            
 
             if  self.y==(len(self.map[self.x])-1) and halt.isLocked==True: #занято  
                 self.score=-50
@@ -126,7 +125,7 @@ class Bus:
 
             if self.y==(len(self.map[self.x])-1) and halt.isLocked==False:
                 halt.isLocked=True
-                self.score=halt.passengers
+                self.score=halt.passengers-(1.5*coeff**2)
                 halt.passengers=0
                 for h in halt.X:
                     self.map[h[0]][h[1]]=9
@@ -145,22 +144,22 @@ class Bus:
                         self.x=coord[0]
                         self.y=coord[1]+1
 
-                        if self.map[self.x][self.y]==1:#если впереди есть автобус, то штраф
-                            self.score=-50
-                            #self.map[self.x][self.y]=0
-                            
-                            halt.isLocked=False
-                            for h in halt.X:
-                                self.map[h[0]][h[1]]=halt.simbol
-                            return self.encode(self.x,self.y),self.score, self.isDone 
-                        else:
-                            self.map[self.x][self.y]=1
-                            self.score=-1
-                            break
+                        self.map[self.x][self.y]=1
 
-                halt.isLocked=False
-                for h in halt.X:
-                    self.map[h[0]][h[1]]=halt.simbol
+                        halt.isLocked=False
+                        for h in halt.X:
+                            self.map[h[0]][h[1]]=halt.simbol
+
+                        halt_new=self.getHalt(self.x)
+                        for road in self.roads.values():
+                            if road.finish==halt_new and road.start.simbol==self.map[self.x][0]:
+                                coeff=road.coeff
+                                break
+
+                        self.score=-1*coeff
+                        break
+
+                
             else:
                 self.score=-100
                 #self.map[self.x][self.y]=0
@@ -175,29 +174,31 @@ class Bus:
                     if coord[1]==0:
                         self.x=coord[0]
                         self.y=coord[1]+1
-                        if self.map[self.x][self.y]==1:#если впереди есть автобус, то штраф
-                            self.score=-50
-                            #self.map[self.x][self.y]=0
-                            
-                            halt.isLocked=False
-                            for h in halt.X:
-                                self.map[h[0]][h[1]]=halt.simbol
-                            return self.encode(self.x,self.y),self.score, self.isDone 
-                        else:
-                            self.map[self.x][self.y]=1
-                            self.score=-1
-                            break
-                halt.isLocked=False
-                for h in halt.X:
-                    self.map[h[0]][h[1]]=halt.simbol
+                        
+                        halt.isLocked=False
+                        for h in halt.X:
+                            self.map[h[0]][h[1]]=halt.simbol
+
+                        halt_new=self.getHalt(self.x)
+                        for road in self.roads.values():
+                            if road.finish==halt_new and road.start.simbol==self.map[self.x][0]:
+                                coeff=road.coeff
+                                break
+
+                        self.map[self.x][self.y]=1
+                        self.score=-1*coeff
+                        break
+                
             else:
                 self.score=-100
                 #self.map[self.x][self.y]=0
                 
                 return self.encode(self.x,self.y),self.score, self.isDone
 
-        if self.time>100:           
-           self.isDone=True
+        # if self.time>100:           
+        #    self.isDone=True
+        if self.x==2 and self.y==8:
+            self.isDone=True
         return self.encode(self.x,self.y),self.score, self.isDone
 
     def encode(self,player_x,player_y):

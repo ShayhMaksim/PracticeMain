@@ -3,15 +3,16 @@ from typing import List
 
 class Halt:
     
-    def __init__(self,X:List,simbol,name) -> None:
+    def __init__(self,X:List,simbol,name,passengers) -> None:
         self.X=X
         self.simbol=simbol
-        self.passengers=0
+        self.passengers=passengers
         self.name=name
         self.isLocked=False
+        self.generator=self.passengers
         
 
     def generate(self):
-        self.passengers=self.passengers+random.randint(1,10)
+        self.passengers=self.generator#self.passengers+random.randint(1,10)
 
     

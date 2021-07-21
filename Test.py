@@ -21,7 +21,7 @@ app = QApplication(sys.argv)
 
 city=City()
 #animator=Animator(city)
-bus = Bus(5,4,city.chart,city.Halts)
+bus = Bus(3,1,city.chart,city.Halts)
 city.AddBus([bus])
 
 
@@ -29,21 +29,21 @@ city.AddBus([bus])
 animator=Animator(city)
 #animator.Update()
 
-def Update(app:QApplication,animator:Animator,city:City):
-    time.sleep(10)
-    city.busses[0].step(2)
+# def Update(app:QApplication,animator:Animator,city:City):
+#     time.sleep(10)
+#     city.busses[0].step(2)
     
-    #animator.Update()
+#     #animator.Update()
     
 
-class AThread(QThread):
+# class AThread(QThread):
 
-    def run(self,animator,city,step):
+#     def run(self,animator,city,step):
         
-        self.sleep(1)
-        city.busses[0].step(step)    
-        animator.Update()
-        QApplication.processEvents()
+#         self.sleep(1)
+#         city.busses[0].step(step)    
+#         animator.Update()
+#         QApplication.processEvents()
 
     
 
@@ -51,8 +51,8 @@ class AThread(QThread):
 # t = Thread(target=Update,args=(app,animator,city))
 # t.start()
 
-QApplication.processEvents()
-t = AThread()
+# QApplication.processEvents()
+# t = AThread()
 
 # t.run(animator=animator,city=city,step=3)
 
